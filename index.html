@@ -443,7 +443,7 @@
 
                 updateDebug('Token generated, loading iframe...', '', '');
 
-                const komzBaseUrl = 'http://localhost:3000';
+                const komzBaseUrl = 'https://komz.tech';
                 const komzUrl = `${komzBaseUrl}/jwt-auth?token=${encodeURIComponent(jwt)}`;
 
                 updateDebug('Connecting...', komzUrl, '');
@@ -491,7 +491,7 @@
             // console.log('Received message from iframe:', event);
 
             // In production, verify origin
-            // if (event.origin !== 'http://localhost:3000') return;
+            // if (event.origin !== 'https://komz.tech') return;
 
             if (event.data.type === 'komz_loaded') {
                 console.log('Komz dashboard loaded successfully');
