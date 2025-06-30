@@ -410,23 +410,9 @@
             const token = document.getElementById('token').value.trim();
             const loadBtn = document.getElementById('loadBtn');
 
-            // Validation
-            if (!orgId) {
-                alert('Please enter an organization ID');
-                return;
-            }
+         
 
-            if (!userEmail) {
-                alert('Please enter a user email');
-                return;
-            }
-
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(userEmail)) {
-                alert('Please enter a valid email address');
-                return;
-            }
+         
 
             clearError();
             updateDebug('Starting...', '', '');
