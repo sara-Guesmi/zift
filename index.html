@@ -148,6 +148,13 @@
             transform: translateY(0);
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .iframe-container {
             background: white;
             border-radius: 12px;
@@ -174,6 +181,7 @@
             bottom: 0;
             background: rgba(255, 255, 255, 0.9);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             border-radius: 8px;
@@ -187,6 +195,12 @@
             border-top: 4px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading-text {
+            color: #667eea;
+            font-weight: 500;
         }
 
         @keyframes spin {
@@ -233,6 +247,15 @@
             color: #333;
         }
 
+        .error-message {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border-left: 4px solid #d32f2f;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -268,28 +291,29 @@
 
             <div class="controls">
                 <div class="control-group">
-                    <label for="orgSelect">Organization:</label>
-                    <select id="orgSelect">
-                        <option value="org_123">Acme Corporation</option>
-                        <option value="org_456">TechStart Inc</option>
-                        <option value="org_789">Global Solutions</option>
-                    </select>
+                    <label for="orgId">Organization ID:</label>
+                    <input type="text" id="orgId" value="acme-corp-123" placeholder="Enter organization ID">
                 </div>
 
                 <div class="control-group">
                     <label for="userEmail">User Email:</label>
                     <input type="email" id="userEmail" value="john.doe@example.com" placeholder="Enter user email">
                 </div>
+                    <div class="control-group">
+                        <label for="token">Token:</label>
+                        <input type="text" id="token" value="" placeholder="Enter the token">
+                    </div>
 
                 <div class="control-group">
                     <label>&nbsp;</label>
-                    <button class="btn" onclick="loadKomzIframe()">Load Komz Dashboard</button>
+                    <button class="btn" id="loadBtn" onclick="loadKomzIframe()">Load Komz Dashboard</button>
                 </div>
             </div>
 
             <div class="iframe-container">
                 <div id="loadingOverlay" class="loading-overlay" style="display: none;">
                     <div class="loader"></div>
+                    <div class="loading-text">Generating token and loading dashboard...</div>
                 </div>
                 <iframe id="komzIframe" class="komz-iframe" src="about:blank" title="Komz Dashboard">
                 </iframe>
@@ -298,14 +322,25 @@
             <div class="info-panel">
                 <h4>🔐 How this integration works:</h4>
                 <p>
-                    Zift generates a secure JWT token containing the organization ID and user email,
-                    then loads Komz in an iframe. Komz validates the token and automatically 
-                 authenticates the user, displaying their personalized dashboard without requiring
+                    Zift calls the Komz API to generate a secure JWT token using the organization ID and user email,
+                    then loads Komz in an iframe. Komz validates the token and automatically
+                    authenticates the user, displaying their personalized dashboard without requiring
                     separate login credentials.
                 </p>
             </div>
 
-        
+            <div class="debug-panel">
+                <h4>Debug Information:</h4>
+                <div id="debugInfo">
+                    <div>Status: <span id="debugStatus">Ready</span></div>
+                    <div>API URL: <span id="debugApiUrl">https://komz.azurewebsites.net/api/Account/zift/generate</span>
+                    </div>
+                    <div>Current URL: <span id="debugUrl">-</span></div>
+                    <div>Last Error: <span id="debugError">None</span></div>
+                </div>
+            </div>
+
+            <div id="errorContainer"></div>
         </div>
     </div>
 
@@ -317,77 +352,143 @@
             if (error) document.getElementById('debugError').textContent = error;
         }
 
-        // Simulated JWT generation
-        function generateJWT(orgId, userEmail) {
-            // In real implementation, this would be done server-side
-            const header = btoa(JSON.stringify({
-                "alg": "HS256",
-                "typ": "JWT"
-            }));
-
-            const payload = btoa(JSON.stringify({
-                "org_id": orgId,
-                "user_email": userEmail,
-                "iat": Math.floor(Date.now() / 1000),
-                "exp": Math.floor(Date.now() / 1000) + 3600 // 1 hour
-            }));
-
-            // In production, this would be properly signed with the secret key
-            const signature = "simulated_signature_" + Math.random().toString(36).substring(7);
-
-            return `${header}.${payload}.${signature}`;
+        // Show error message
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = `
+                <div class="error-message">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
         }
 
-        function loadKomzIframe() {
-            const orgId = document.getElementById('orgSelect').value;
-            const userEmail = document.getElementById('userEmail').value;
+        // Clear error message
+        function clearError() {
+            document.getElementById('errorContainer').innerHTML = '';
+        }
+
+        // Generate token from API
+        async function generateTokenFromAPI(organizationId, userEmail) {
+            const apiUrl = 'https://komz.azurewebsites.net/api/Account/zift/generate';
+
+            try {
+                updateDebug('Calling API...', apiUrl, '');
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        organizationId: organizationId,
+                        email: userEmail
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Assuming the API returns the token in a 'token' field
+                if (data.token) {
+                    return data.token;
+                } else {
+                    throw new Error('No token received from API');
+                }
+            } catch (error) {
+                console.error('Token generation error:', error);
+                throw error;
+            }
+        }
+
+        async function loadKomzIframe() {
+            const orgId = document.getElementById('orgId').value.trim();
+            const userEmail = document.getElementById('userEmail').value.trim();
+            const token = document.getElementById('token').value.trim();
+            const loadBtn = document.getElementById('loadBtn');
+
+            // Validation
+            if (!orgId) {
+                alert('Please enter an organization ID');
+                return;
+            }
 
             if (!userEmail) {
                 alert('Please enter a user email');
                 return;
             }
 
-            updateDebug('Loading...', '', '');
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(userEmail)) {
+                alert('Please enter a valid email address');
+                return;
+            }
 
+            clearError();
+            updateDebug('Starting...', '', '');
+
+            // Disable button and show loading
+            loadBtn.disabled = true;
+            loadBtn.textContent = 'Loading...';
             document.getElementById('loadingOverlay').style.display = 'flex';
 
-            const jwt = 'eyJhbGciOiJBMjU2S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2IiwidHlwIjoiSldUIiwiY3R5IjoiSldUIn0.81VJKWwnTOfIatMSGUAOnMkZ8Y0EvggW9L8TrUcV1voK0MmaxNOpJQ.7wHNZWL2s8GyNwvCMqxdyA.WGv2_WeatNQua9445DxD6wN8I0y0HyZehEc3gdduqGBI4wUTWs4MT_vF4yOlo99dKS_coZFVw8tIaZSHcz5OkolGA4R1FNzbmvE_F-XrQqWcMSsWapCnz3a8wpV4I4RImk3P9-aQFm2ImX5zWwwsrLtOs5X3qgd-5x0P9JkD_3mqgRE14JHR-dpb3gt1TpQMzNqBuY36teR6R3XsCXuKe9NBXphrTWziZ3_yJlx-1h8YT07X9wpM45BBZ8GtkweoObRKdnLkvdHbjPryEkP_GakhluAUPDvelEkU0XP_VwrhH1y1n4DJKwW09YFMiN04iEcRD3M3NoLtBctflzUdWVygfc4y85yLwmnrAA_5ax_6VZ-6KedVAULFTtdddkIDDR3NuuHkau2Jq9TxTPQ1kqi5F8CJwPA4mbP6ElKUeOBIisprDH3e1hXS3NjmkLIodpygo2XV2fhfPdE91-yJenLjdwlKQZyrjZ62riRCfyA.eq60-SXULKc4Lab-cL-luA'
-
-            const komzBaseUrl = 'http://localhost:3000'; 
-            const komzUrl = `${komzBaseUrl}/jwt-auth?token=${encodeURIComponent(jwt)}`;
-
-            updateDebug('Connecting...', komzUrl, '');
-
-            // Load iframe
-            const iframe = document.getElementById('komzIframe');
-
-            iframe.onload = () => {
-                updateDebug('Loaded', komzUrl, '');
-                document.getElementById('loadingOverlay').style.display = 'none';
-            };
-
-            iframe.onerror = (error) => {
-                updateDebug('Error', komzUrl, error.toString());
-                document.getElementById('loadingOverlay').style.display = 'none';
-                alert('Failed to load Komz dashboard. Please check console for details.');
-            };
-
             try {
+                // Generate token from API
+                updateDebug('Generating token...', '', '');
+                const jwt = await token
+
+                updateDebug('Token generated, loading iframe...', '', '');
+
+                const komzBaseUrl = 'http://localhost:3000';
+                const komzUrl = `${komzBaseUrl}/jwt-auth?token=${encodeURIComponent(jwt)}`;
+
+                updateDebug('Connecting...', komzUrl, '');
+
+                // Load iframe
+                const iframe = document.getElementById('komzIframe');
+
+                iframe.onload = () => {
+                    updateDebug('Loaded successfully', komzUrl, '');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    loadBtn.disabled = false;
+                    loadBtn.textContent = 'Load Komz Dashboard';
+                };
+
+                iframe.onerror = (error) => {
+                    const errorMsg = 'Failed to load iframe';
+                    updateDebug('Iframe Error', komzUrl, errorMsg);
+                    showError(errorMsg + '. Please check if Komz is running on localhost:3000');
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    loadBtn.disabled = false;
+                    loadBtn.textContent = 'Load Komz Dashboard';
+                };
+
                 iframe.src = komzUrl;
+
             } catch (error) {
-                updateDebug('Error', komzUrl, error.toString());
+                const errorMsg = error.message || 'Unknown error occurred';
+                updateDebug('API Error', '', errorMsg);
+                showError(`Failed to generate token: ${errorMsg}`);
                 document.getElementById('loadingOverlay').style.display = 'none';
-                alert('Error loading iframe: ' + error.message);
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Load Komz Dashboard';
+                console.error('Error loading Komz:', error);
             }
         }
 
+        // Auto-load on page ready (optional - remove if not wanted)
         window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(loadKomzIframe, 1500);
+            // Uncomment the line below if you want auto-loading
+            // setTimeout(loadKomzIframe, 1500);
         });
 
         // Handle iframe communication
         window.addEventListener('message', (event) => {
-            console.log('Received message from iframe:', event);
+            // console.log('Received message from iframe:', event);
 
             // In production, verify origin
             // if (event.origin !== 'http://localhost:3000') return;
@@ -397,8 +498,8 @@
                 updateDebug('Success', event.data.url || '', '');
             } else if (event.data.type === 'komz_error') {
                 console.error('Komz error:', event.data.message);
-                updateDebug('Error', '', event.data.message);
-                alert('Error loading Komz: ' + event.data.message);
+                updateDebug('Komz Error', '', event.data.message);
+                showError('Komz error: ' + event.data.message);
             }
         });
 
@@ -406,6 +507,14 @@
         window.addEventListener('error', (event) => {
             console.error('Page error:', event.error);
             updateDebug('Page Error', '', event.error?.message || event.message);
+        });
+
+        // Handle fetch errors globally
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            if (event.reason && event.reason.message) {
+                updateDebug('Promise Error', '', event.reason.message);
+            }
         });
     </script>
 </body>
