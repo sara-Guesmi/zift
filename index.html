@@ -439,7 +439,7 @@
             try {
                 // Generate token from API
                 updateDebug('Generating token...', '', '');
-                const jwt = await token
+                const jwt = await generateTokenFromAPI(orgId, userEmail);
 
                 updateDebug('Token generated, loading iframe...', '', '');
 
@@ -491,7 +491,7 @@
             // console.log('Received message from iframe:', event);
 
             // In production, verify origin
-            // if (event.origin !== 'https://komz.tech') return;
+            // if (event.origin !== 'http://localhost:3000') return;
 
             if (event.data.type === 'komz_loaded') {
                 console.log('Komz dashboard loaded successfully');
