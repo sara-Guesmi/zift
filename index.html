@@ -299,20 +299,13 @@
                 <h4>🔐 How this integration works:</h4>
                 <p>
                     Zift generates a secure JWT token containing the organization ID and user email,
-                    then loads Komz in an iframe. Komz validates the token and automatically creates
-                    or authenticates the user, displaying their personalized dashboard without requiring
+                    then loads Komz in an iframe. Komz validates the token and automatically 
+                 authenticates the user, displaying their personalized dashboard without requiring
                     separate login credentials.
                 </p>
             </div>
 
-            <div class="debug-panel">
-                <h4>Debug Information:</h4>
-                <div id="debugInfo">
-                    <div>Status: <span id="debugStatus">Ready</span></div>
-                    <div>Current URL: <span id="debugUrl">-</span></div>
-                    <div>Last Error: <span id="debugError">None</span></div>
-                </div>
-            </div>
+        
         </div>
     </div>
 
@@ -356,14 +349,11 @@
 
             updateDebug('Loading...', '', '');
 
-            // Show loading overlay
             document.getElementById('loadingOverlay').style.display = 'flex';
 
-            // Generate JWT token (in production, get this from your backend)
             const jwt = 'eyJhbGciOiJBMjU2S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2IiwidHlwIjoiSldUIiwiY3R5IjoiSldUIn0.81VJKWwnTOfIatMSGUAOnMkZ8Y0EvggW9L8TrUcV1voK0MmaxNOpJQ.7wHNZWL2s8GyNwvCMqxdyA.WGv2_WeatNQua9445DxD6wN8I0y0HyZehEc3gdduqGBI4wUTWs4MT_vF4yOlo99dKS_coZFVw8tIaZSHcz5OkolGA4R1FNzbmvE_F-XrQqWcMSsWapCnz3a8wpV4I4RImk3P9-aQFm2ImX5zWwwsrLtOs5X3qgd-5x0P9JkD_3mqgRE14JHR-dpb3gt1TpQMzNqBuY36teR6R3XsCXuKe9NBXphrTWziZ3_yJlx-1h8YT07X9wpM45BBZ8GtkweoObRKdnLkvdHbjPryEkP_GakhluAUPDvelEkU0XP_VwrhH1y1n4DJKwW09YFMiN04iEcRD3M3NoLtBctflzUdWVygfc4y85yLwmnrAA_5ax_6VZ-6KedVAULFTtdddkIDDR3NuuHkau2Jq9TxTPQ1kqi5F8CJwPA4mbP6ElKUeOBIisprDH3e1hXS3NjmkLIodpygo2XV2fhfPdE91-yJenLjdwlKQZyrjZ62riRCfyA.eq60-SXULKc4Lab-cL-luA'
 
-            // Construct Komz URL with JWT - Updated to match your route
-            const komzBaseUrl = 'http://localhost:3000'; // Make sure this matches your React app URL
+            const komzBaseUrl = 'http://localhost:3000'; 
             const komzUrl = `${komzBaseUrl}/jwt-auth?token=${encodeURIComponent(jwt)}`;
 
             updateDebug('Connecting...', komzUrl, '');
@@ -371,7 +361,6 @@
             // Load iframe
             const iframe = document.getElementById('komzIframe');
 
-            // Set up event handlers before loading
             iframe.onload = () => {
                 updateDebug('Loaded', komzUrl, '');
                 document.getElementById('loadingOverlay').style.display = 'none';
@@ -383,7 +372,6 @@
                 alert('Failed to load Komz dashboard. Please check console for details.');
             };
 
-            // Load the iframe
             try {
                 iframe.src = komzUrl;
             } catch (error) {
@@ -393,7 +381,6 @@
             }
         }
 
-        // Auto-load on page load with default values
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(loadKomzIframe, 1500);
         });
