@@ -577,7 +577,7 @@
 
                 updateDebug(`Token ready, loading ${env.name} environment...`, "", "");
 
-                const komzUrl = `${env.url}/jwt-auth?token=${encodeURIComponent(jwt)}&returnUrl=/preferences`;
+                const komzUrl = `${env.url}/jwt-auth?token=${encodeURIComponent(jwt)}&returnUrl=/settings/preferences`;
                 updateDebug("Connecting...", komzUrl, "");
 
                 // Load iframe
