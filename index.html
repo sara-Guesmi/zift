@@ -450,7 +450,7 @@
         const ENVIRONMENTS = {
             dev: {
                 name: "Development",
-                url: "https://komz.tech",
+                url: "http://localhost:3000",
                 apiUrl: "https://komz.azurewebsites.net/api/Account/zift/generate"
             },
             prod: {
@@ -577,8 +577,7 @@
 
                 updateDebug(`Token ready, loading ${env.name} environment...`, "", "");
 
-                const komzUrl = `${env.url}/jwt-auth?token=${encodeURIComponent(jwt)}`;
-
+                const komzUrl = `${env.url}/jwt-auth?token=${encodeURIComponent(jwt)}&returnUrl=/preferences`;
                 updateDebug("Connecting...", komzUrl, "");
 
                 // Load iframe
@@ -624,7 +623,7 @@
         window.addEventListener("message", (event) => {
             // Verify origin based on current environment
             const env = ENVIRONMENTS[currentEnvironment];
-            const allowedOrigins = [env.url, 'https://komz.tech', 'https://komzhub.com'];
+            const allowedOrigins = [env.url, 'http://localhost:3000', 'https://komzhub.com'];
 
             // In production, you might want to be more strict about origin checking
             // if (!allowedOrigins.includes(event.origin)) return;
