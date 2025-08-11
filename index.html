@@ -155,6 +155,66 @@
             box-shadow: none;
         }
 
+        /* Navigation buttons styling */
+        .navigation-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .navigation-panel h4 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+        }
+
+        .nav-btn:active {
+            transform: translateY(0);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
         .environment-selector {
             background: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -310,6 +370,10 @@
                 flex-direction: column;
             }
 
+            .nav-buttons {
+                flex-direction: column;
+            }
+
             .panel-header {
                 flex-direction: column;
                 align-items: flex-start;
@@ -360,6 +424,28 @@
                 </div>
             </div>
 
+            <div class="navigation-panel">
+                <h4>🧭 Quick Navigation:</h4>
+                <div class="nav-buttons">
+                    <button class="nav-btn" onclick="navigateToRoute('/admin-dashboard')" data-route="/admin-dashboard">
+                        Admin Dashboard
+                    </button>
+                    <button class="nav-btn" onclick="navigateToRoute('/dashboard')" data-route="/dashboard">
+                        🏠 Dashboard
+                    </button>
+                    <button class="nav-btn" onclick="navigateToRoute('/settings/account')"
+                        data-route="/settings/account">
+                        ⚙️ Account Settings
+                    </button>
+                    <button class="nav-btn" onclick="navigateToRoute('/settings/preferences')" data-route="/settings/preferences">
+                        ⚙️ Account Preferences
+                    </button>
+                    <button class="nav-btn" onclick="navigateToRoute('/settings/recommend-friend')" data-route="/settings/recommend-friend">
+                        ⚙️ Recommend Friend
+                    </button>
+                </div>
+            </div>
+
             <div class="info-panel">
                 <h4>🔐 How this integration works:</h4>
                 <p>
@@ -379,15 +465,14 @@
                         APIS
                     </a>
                 </p>
-                
+
                 <p style="font-weight: bold;">
                     Link for swagger Prod
-                    <a href="https://komzprod-g4exdwesg4fcgzc9.uksouth-01.azurewebsites.net/swagger/index.html" target="_blank">
+                    <a href="https://komzprod-g4exdwesg4fcgzc9.uksouth-01.azurewebsites.net/swagger/index.html"
+                        target="_blank">
                         APIS
                     </a>
                 </p>
-                
-
             </div>
 
             <div class="controls">
@@ -430,6 +515,7 @@
                 <div id="debugInfo">
                     <div>Status: <span id="debugStatus">Ready</span></div>
                     <div>Environment: <span id="debugEnv">Development</span></div>
+                    <div>Current Route: <span id="debugRoute">-</span></div>
                     <div>
                         API URL:
                         <span id="debugApiUrl">
@@ -450,7 +536,7 @@
         const ENVIRONMENTS = {
             dev: {
                 name: "Development",
-                url: "http://localhost:3000",
+                url: "https://komz.tech",
                 apiUrl: "https://komz.azurewebsites.net/api/Account/zift/generate"
             },
             prod: {
@@ -461,6 +547,7 @@
         };
 
         let currentEnvironment = "dev";
+        let currentRoute = "/dashboard"; // Default route
 
         // Initialize environment listeners
         function initializeEnvironmentListeners() {
@@ -486,6 +573,30 @@
             const iframe = document.getElementById('komzIframe');
             iframe.src = 'about:blank';
             updateDebug('Environment switched to ' + env.name, '', '');
+        }
+
+        // Navigate to a specific route
+        function navigateToRoute(route) {
+            currentRoute = route;
+            updateActiveNavButton(route);
+            updateDebug(`Navigating to ${route}...`, '', '');
+            document.getElementById('debugRoute').textContent = route;
+
+            // Load the iframe with the new route
+            loadKomzIframe(route);
+        }
+
+        // Update active navigation button
+        function updateActiveNavButton(activeRoute) {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => {
+                const btnRoute = btn.getAttribute('data-route');
+                if (btnRoute === activeRoute) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
         }
 
         // Debug logging
@@ -549,12 +660,15 @@
             }
         }
 
-        async function loadKomzIframe() {
+        async function loadKomzIframe(returnUrl = null) {
             const orgId = document.getElementById("orgId").value.trim();
             const userEmail = document.getElementById("userEmail").value.trim();
             const token = document.getElementById("token").value.trim();
             const loadBtn = document.getElementById("loadBtn");
             const env = ENVIRONMENTS[currentEnvironment];
+
+            // Use provided returnUrl or current route
+            const routeToLoad = returnUrl || currentRoute;
 
             clearError();
             updateDebug("Starting...", "", "");
@@ -563,6 +677,10 @@
             loadBtn.disabled = true;
             loadBtn.textContent = "Loading...";
             document.getElementById("loadingOverlay").style.display = "flex";
+
+            // Disable nav buttons during loading
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => btn.disabled = true);
 
             try {
                 // Use provided token or generate from API
@@ -577,7 +695,7 @@
 
                 updateDebug(`Token ready, loading ${env.name} environment...`, "", "");
 
-                const komzUrl = `${env.url}/jwt-auth?token=${encodeURIComponent(jwt)}&returnUrl=/settings/preferences`;
+                const komzUrl = `${env.url}/jwt-auth?token=${encodeURIComponent(jwt)}&returnUrl=${encodeURIComponent(routeToLoad)}`;
                 updateDebug("Connecting...", komzUrl, "");
 
                 // Load iframe
@@ -588,6 +706,14 @@
                     document.getElementById("loadingOverlay").style.display = "none";
                     loadBtn.disabled = false;
                     loadBtn.textContent = "Load Komz Dashboard";
+
+                    // Re-enable nav buttons
+                    navButtons.forEach(btn => btn.disabled = false);
+
+                    // Update active button if this was a navigation action
+                    if (returnUrl) {
+                        updateActiveNavButton(returnUrl);
+                    }
                 };
 
                 iframe.onerror = (error) => {
@@ -599,6 +725,9 @@
                     document.getElementById("loadingOverlay").style.display = "none";
                     loadBtn.disabled = false;
                     loadBtn.textContent = "Load Komz Dashboard";
+
+                    // Re-enable nav buttons
+                    navButtons.forEach(btn => btn.disabled = false);
                 };
 
                 iframe.src = komzUrl;
@@ -609,6 +738,10 @@
                 document.getElementById("loadingOverlay").style.display = "none";
                 loadBtn.disabled = false;
                 loadBtn.textContent = "Load Komz Dashboard";
+
+                // Re-enable nav buttons
+                navButtons.forEach(btn => btn.disabled = false);
+
                 console.error("Error loading Komz:", error);
             }
         }
@@ -617,6 +750,10 @@
         window.addEventListener("DOMContentLoaded", () => {
             initializeEnvironmentListeners();
             updateEnvironmentDisplay();
+
+            // Set default active button
+            updateActiveNavButton(currentRoute);
+            document.getElementById('debugRoute').textContent = currentRoute;
         });
 
         // Handle iframe communication
